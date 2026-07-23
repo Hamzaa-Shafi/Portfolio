@@ -1,0 +1,27 @@
+{
+  "name": "hamza-shafi-portfolio",
+  "version": "1.0.0",
+  "description": "Hamza Shafi's Developer Portfolio with Vercel Speed Insights",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild speed-insights.js --bundle --format=esm --outfile=dist/speed-insights.bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hamzaa-Shafi/Portfolio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hamzaa-Shafi/Portfolio/issues"
+  },
+  "homepage": "https://github.com/Hamzaa-Shafi/Portfolio#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
