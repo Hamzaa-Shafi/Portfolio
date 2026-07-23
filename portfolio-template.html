@@ -1,0 +1,946 @@
+<!--
+  PORTFOLIO TEMPLATE — quick guide
+  Search for "EDIT:" comments throughout this file to find every spot
+  that needs your real name, photo, links, projects, skills, etc.
+  Everything is in this single HTML file (styles in <style>, markup below, scripts at the bottom).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- EDIT: page title shown in the browser tab -->
+<title>Hamza Shafi — Developer Portfolio</title>
+<style>
+  :root{
+    --bg: #0a0e0c;
+    --bg-raised: #101512;
+    --bg-card: #131a16;
+    --line: #23302a;
+    --text: #d9e6df;
+    --text-dim: #7c9188;
+    --accent: #7fffa0;
+    --accent-dim: #4a9d68;
+    --accent2: #ffb454;
+    --danger: #ff6b6b;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior:smooth; }
+
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(127,255,160,0.015) 0px, rgba(127,255,160,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index:1;
+  }
+
+  /* ---------- BACKGROUND FX ---------- */
+  .bg-fx{
+    position: fixed; inset:0;
+    z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .bg-grid{
+    position:absolute; inset:-2px;
+    background-image:
+      linear-gradient(rgba(127,255,160,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,255,160,0.06) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 85%);
+    animation: gridDrift 30s linear infinite;
+    opacity:0.6;
+  }
+  /* Animated network of nodes + connecting lines, drawn on canvas via JS below */
+  #networkCanvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+  }
+  @keyframes gridDrift{
+    0%{ background-position: 0 0, 0 0; }
+    100%{ background-position: 46px 92px, 46px 92px; }
+  }
+  .bg-glow{
+    position:absolute;
+    width:52vw; height:52vw;
+    max-width:760px; max-height:760px;
+    border-radius:50%;
+    filter: blur(90px);
+    opacity:0.16;
+  }
+  .bg-glow.g1{
+    top:-14%; left:-10%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    animation: floatA 22s ease-in-out infinite;
+  }
+  .bg-glow.g2{
+    bottom:-18%; right:-12%;
+    background: radial-gradient(circle, var(--accent2) 0%, transparent 70%);
+    opacity:0.10;
+    animation: floatB 26s ease-in-out infinite;
+  }
+  @keyframes floatA{
+    0%, 100%{ transform: translate(0,0) scale(1); }
+    50%{ transform: translate(4%, 6%) scale(1.08); }
+  }
+  @keyframes floatB{
+    0%, 100%{ transform: translate(0,0) scale(1); }
+    50%{ transform: translate(-5%, -4%) scale(1.1); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-grid, .bg-glow{ animation:none; }
+  }
+
+  /* ---------- CUSTOM CURSOR ---------- */
+  .cursor-ball{
+    position: fixed;
+    top:0; left:0;
+    width: 14px; height: 14px;
+    margin-left:-7px; margin-top:-7px;
+    border-radius:50%;
+    background: var(--accent);
+    /* Single, lighter shadow — mix-blend-mode was removed below because it forces the
+       browser to recomposite the whole page under the cursor every single frame,
+       which is what caused the perceived lag/jank while moving the mouse. */
+    box-shadow: 0 0 10px rgba(127,255,160,0.55);
+    pointer-events:none;
+    z-index: 9999;
+    transform: translate3d(-100px,-100px,0);
+    will-change: transform;
+    transition: width .2s cubic-bezier(.22,1,.36,1), height .2s cubic-bezier(.22,1,.36,1),
+                margin .2s cubic-bezier(.22,1,.36,1), background .2s ease, opacity .2s ease;
+    opacity:0;
+  }
+  .cursor-ball.active{ opacity:1; }
+  .cursor-ball.hovering{
+    width:32px; height:32px;
+    margin-left:-16px; margin-top:-16px;
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    box-shadow: 0 0 12px rgba(127,255,160,0.4);
+  }
+  body.custom-cursor, body.custom-cursor a, body.custom-cursor button{ cursor:none; }
+
+  @media (hover:none), (pointer:coarse){
+    .cursor-ball{ display:none; }
+  }
+
+  a { color: var(--accent); text-decoration:none; }
+
+  .mono { font-family: var(--font-mono); }
+
+  ::selection { background: var(--accent); color:#04140a; }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 18px 32px;
+    background: rgba(10,14,12,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom:1px solid var(--line);
+    z-index:100;
+  }
+  .logo{ font-family:var(--font-mono); font-weight:600; color:var(--text); letter-spacing:1px; }
+  .logo span{ color:var(--accent); }
+  .nav-links{ display:flex; gap:28px; list-style:none; font-family:var(--font-mono); font-size:13px; }
+  .nav-links a{ color: var(--text-dim); position:relative; padding-bottom:3px; transition: color .2s; }
+  .nav-links a::after{
+    content:""; position:absolute; left:0; bottom:0;
+    width:0; height:1px; background: var(--accent);
+    transition: width .25s ease;
+  }
+  .nav-links a:hover{ color: var(--accent); }
+  .nav-links a:hover::after{ width:100%; }
+  .logo{ transition: text-shadow .25s ease; }
+  .logo:hover{ text-shadow: 0 0 10px rgba(127,255,160,0.6); }
+  .nav-toggle{ display:none; background:none; border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); padding:6px 10px; cursor:pointer; }
+
+  @media (max-width:760px){
+    .nav-links{
+      position:fixed; top:57px; left:0; right:0;
+      flex-direction:column; gap:0;
+      background: var(--bg-raised);
+      border-bottom:1px solid var(--line);
+      max-height:0; overflow:hidden;
+      transition: max-height .25s ease;
+    }
+    .nav-links.open{ max-height:320px; }
+    .nav-links li{ border-top:1px solid var(--line); }
+    .nav-links a{ display:block; padding:14px 24px; }
+    .nav-toggle{ display:block; }
+  }
+
+  section{ padding: 100px 8vw; position:relative; z-index:2; }
+  .eyebrow{
+    font-family: var(--font-mono);
+    color: var(--accent-dim);
+    font-size:13px;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{ content:"$"; color:var(--accent); }
+  h2{ font-family:var(--font-mono); font-size:clamp(24px,3vw,34px); font-weight:600; margin-bottom:36px; }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    min-height:100vh;
+    display:flex; flex-direction:column; justify-content:center;
+    padding-top:140px;
+    max-width: 1180px;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 110px;
+    align-items:center;
+  }
+  .hero-photo{
+    position:relative;
+    justify-self:center;
+    width:100%;
+    max-width:340px;
+    margin-left: 24px;
+  }
+  .hero-photo .frame{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    background: var(--bg-card);
+    box-shadow: 0 0 50px rgba(127,255,160,0.08);
+  }
+  .hero-photo img{
+    display:block;
+    width:100%;
+    aspect-ratio: 4 / 5;
+    object-fit:cover;
+    filter: grayscale(15%) contrast(1.05);
+  }
+  .hero-photo .corner{
+    position:absolute;
+    width:22px; height:22px;
+    border: 2px solid var(--accent);
+    opacity:0.85;
+  }
+  .hero-photo .corner.tl{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+  .hero-photo .corner.tr{ top:-1px; right:-1px; border-left:none; border-bottom:none; }
+  .hero-photo .corner.bl{ bottom:-1px; left:-1px; border-right:none; border-top:none; }
+  .hero-photo .corner.br{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
+  .hero-photo .tag{
+    position:absolute; bottom:12px; left:12px;
+    font-family: var(--font-mono);
+    font-size:11px;
+    background: rgba(10,14,12,0.75);
+    border:1px solid var(--accent-dim);
+    color: var(--accent);
+    padding:4px 8px;
+    border-radius:3px;
+    letter-spacing:0.5px;
+  }
+
+  @media (max-width:820px){
+    .hero-grid{ grid-template-columns: 1fr; gap:32px; }
+    .hero-photo{ order:-1; max-width:220px; margin: 0 auto 28px; }
+  }
+  .terminal-window{
+    background: var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:32px;
+    box-shadow: 0 0 40px rgba(127,255,160,0.04);
+  }
+  .terminal-bar{
+    display:flex; gap:6px; align-items:center;
+    padding:10px 14px;
+    background: var(--bg-raised);
+    border-bottom:1px solid var(--line);
+  }
+  .dot{ width:10px; height:10px; border-radius:50%; }
+  .dot.r{ background:#ff5f56; } .dot.y{ background:#ffbd2e; } .dot.g{ background:#27c93f; }
+  .terminal-body{
+    font-family: var(--font-mono);
+    font-size:15px;
+    padding: 20px 22px;
+    min-height: 130px;
+    color: var(--text-dim);
+  }
+  .terminal-body .prompt{ color: var(--accent); }
+  .terminal-body .out{ color: var(--text); }
+
+  .hero h1{
+    font-family: var(--font-mono);
+    font-size: clamp(34px, 6vw, 64px);
+    font-weight:700;
+    line-height:1.05;
+    margin-bottom:16px;
+  }
+  .hero h1 .cursor-accent{ color:var(--accent); }
+  .hero p.role{
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size:16px;
+    margin-bottom:20px;
+  }
+  .hero p.pitch{ max-width:560px; color:var(--text-dim); margin-bottom:36px; font-size:16px; }
+
+  .btn-row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    font-family: var(--font-mono);
+    padding: 12px 22px;
+    border-radius:4px;
+    font-size:14px;
+    border:1px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+    cursor:pointer;
+    transition: all .18s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:hover{ background: var(--accent); color:#04140a; box-shadow: 0 0 18px rgba(127,255,160,0.45); transform: translateY(-2px); }
+  .btn.solid{ background: var(--accent); color:#04140a; }
+  .btn.solid:hover{ background: transparent; color:var(--accent); box-shadow: 0 0 18px rgba(127,255,160,0.3); }
+
+  .stat-row{ display:flex; gap:40px; margin-top:56px; flex-wrap:wrap; }
+  .stat{ transition: transform .2s ease; cursor:default; }
+  .stat:hover{ transform: translateY(-3px); }
+  .stat:hover .num{ text-shadow: 0 0 12px rgba(127,255,160,0.55); }
+  .stat .num{ font-family:var(--font-mono); font-size:30px; color:var(--accent); transition: text-shadow .2s ease; }
+  .stat .label{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+
+  /* ---------- ABOUT ---------- */
+  .about-grid{ display:grid; grid-template-columns: 1.3fr 1fr; gap:60px; align-items:start; }
+  .about-grid p{ color:var(--text-dim); margin-bottom:16px; max-width:60ch; }
+  .about-grid strong{ color:var(--text); }
+  .info-card{
+    background: var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:22px;
+    font-family:var(--font-mono);
+    font-size:14px;
+  }
+  .info-card .row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); transition: padding-left .2s ease, border-color .2s ease; }
+  .info-card .row:hover{ padding-left:6px; border-color: var(--accent-dim); }
+  .info-card .row:last-child{ border-bottom:none; }
+  .info-card .k{ color: var(--text-dim); }
+  .info-card .v{ color: var(--text); text-align:right; }
+
+  @media (max-width:800px){ .about-grid{ grid-template-columns:1fr; } }
+
+  /* ---------- TIMELINE ---------- */
+  .timeline{
+    margin-top:56px;
+    position:relative;
+    padding-left:28px;
+  }
+  .timeline::before{
+    content:"";
+    position:absolute;
+    left:6px; top:6px; bottom:6px;
+    width:1px;
+    background: linear-gradient(to bottom, var(--accent), var(--line) 85%);
+  }
+  .timeline-item{
+    position:relative;
+    padding-bottom:34px;
+  }
+  .timeline-item:last-child{ padding-bottom:0; }
+  .timeline-item::before{
+    content:"";
+    position:absolute;
+    left:-28px; top:4px;
+    width:11px; height:11px;
+    border-radius:50%;
+    background: var(--bg);
+    border:2px solid var(--accent);
+    box-shadow: 0 0 0 4px var(--bg), 0 0 10px rgba(127,255,160,0.5);
+  }
+  .timeline-item .years{
+    font-family: var(--font-mono);
+    font-size:12px;
+    color: var(--accent);
+    letter-spacing:0.5px;
+  }
+  .timeline-item h4{
+    font-size:17px;
+    margin: 4px 0 2px;
+  }
+  .timeline-item .org{
+    font-family: var(--font-mono);
+    font-size:13px;
+    color: var(--text-dim);
+    margin-bottom:6px;
+  }
+  .timeline-item .note{
+    display:inline-block;
+    font-family: var(--font-mono);
+    font-size:11.5px;
+    color: var(--accent2);
+    border:1px solid rgba(255,180,84,0.35);
+    border-radius:3px;
+    padding:2px 8px;
+  }
+  .timeline-item{ transition: transform .2s ease; }
+  .timeline-item:hover{ transform: translateX(4px); }
+
+  /* ---------- EDUCATION TIMELINE ---------- */
+  .timeline{ position:relative; max-width:760px; padding-left:34px; }
+  .timeline::before{
+    content:"";
+    position:absolute; left:6px; top:6px; bottom:6px;
+    width:2px;
+    background: linear-gradient(var(--accent-dim), var(--line));
+  }
+  .timeline-item{ position:relative; padding-bottom:34px; }
+  .timeline-item:last-child{ padding-bottom:0; }
+  .timeline-dot{
+    position:absolute; left:-34px; top:4px;
+    width:14px; height:14px; border-radius:50%;
+    background: var(--bg);
+    border:2px solid var(--accent);
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .timeline-item:hover .timeline-dot{
+    box-shadow: 0 0 12px rgba(127,255,160,0.65);
+    transform: scale(1.15);
+  }
+  .timeline-card{
+    background: var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:16px 20px;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .timeline-item:hover .timeline-card{ border-color: var(--accent-dim); transform: translateX(4px); }
+  .timeline-year{ font-family:var(--font-mono); color:var(--accent-dim); font-size:12px; letter-spacing:0.5px; }
+  .timeline-inst{ font-weight:600; margin:5px 0 2px; }
+  .timeline-degree{ color:var(--text-dim); font-size:14px; }
+  .timeline-badge{
+    display:inline-block; margin-top:10px;
+    font-family:var(--font-mono); font-size:12px;
+    color:var(--accent2); border:1px solid var(--line);
+    padding:3px 9px; border-radius:3px;
+  }
+
+  /* ---------- SKILLS ---------- */
+  .skills-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:18px; }
+  .skill-card{
+    background: var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:20px;
+    transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .skill-card:hover{
+    border-color: var(--accent-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(127,255,160,0.08);
+  }
+  .skill-card:hover .bar-fill{ box-shadow: 0 0 10px rgba(127,255,160,0.6); }
+  .skill-card .head{ display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:14px; margin-bottom:10px; }
+  .skill-card .head .pct{ color: var(--accent); }
+  .bar{ height:6px; background: var(--bg-raised); border-radius:3px; overflow:hidden; border:1px solid var(--line); }
+  .bar-fill{ height:100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); width:0; transition: width 1.1s ease; }
+
+  /* ---------- PROJECTS ---------- */
+  .filter-row{ display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; }
+  .filter-btn{
+    font-family:var(--font-mono); font-size:12px;
+    padding:7px 14px; border-radius:4px;
+    border:1px solid var(--line); color:var(--text-dim);
+    background:transparent; cursor:pointer;
+    transition: border-color .2s ease, color .2s ease, transform .15s ease;
+  }
+  .filter-btn.active, .filter-btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .filter-btn:hover{ transform: translateY(-2px); }
+
+  .project-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:22px; }
+  .project-card{
+    background: var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:22px;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .project-card:hover{
+    transform: translateY(-6px);
+    border-color: var(--accent-dim);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 24px rgba(127,255,160,0.08);
+  }
+  .project-card:hover h3{ color: var(--accent); }
+  .project-card h3{ font-size:19px; transition: color .2s ease; }
+  .project-card:hover .tag-line{ color: var(--accent); }
+  .project-card .tag-line{ font-family:var(--font-mono); font-size:12px; color:var(--accent-dim); transition: color .2s ease; }
+  .project-card p{ color:var(--text-dim); font-size:14px; flex-grow:1; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-family:var(--font-mono); font-size:11px; padding:3px 8px; border:1px solid var(--line); border-radius:3px; color:var(--text-dim); transition: border-color .2s ease, color .2s ease; }
+  .project-card:hover .chip{ border-color: var(--accent-dim); }
+  .project-card .link{ font-family:var(--font-mono); font-size:13px; display:inline-block; transition: transform .2s ease; }
+  .project-card .link:hover{ transform: translateX(4px); }
+
+  /* ---------- CERTS ---------- */
+  .cert-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:18px; }
+  .cert-card{ background:var(--bg-card); border:1px solid var(--line); border-radius:6px; padding:18px; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .cert-card:hover{
+    transform: translateY(-4px) scale(1.015);
+    border-color: var(--accent-dim);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  }
+  .cert-card:hover .date{ color: var(--accent); }
+  .cert-card .name{ font-weight:600; margin-bottom:6px; }
+  .cert-card .issuer{ font-family:var(--font-mono); font-size:12px; color:var(--text-dim); }
+  .cert-card .date{ font-family:var(--font-mono); font-size:12px; color:var(--accent-dim); margin-top:8px; transition: color .2s ease; }
+
+  /* ---------- CONTACT ---------- */
+  .contact-wrap{ text-align:center; max-width:640px; margin:0 auto; }
+  .contact-wrap h2{ font-size:clamp(28px,4vw,42px); margin-bottom:14px; }
+  .contact-wrap p{ color:var(--text-dim); margin-bottom:34px; }
+  .contact-links{ display:flex; flex-wrap:wrap; justify-content:center; gap:14px; }
+  .contact-links a{
+    font-family:var(--font-mono); font-size:14px;
+    border:1px solid var(--line); border-radius:4px;
+    padding:10px 16px; color:var(--text);
+    transition: border-color .18s, color .18s, transform .18s, box-shadow .18s;
+  }
+  .contact-links a:hover{
+    border-color:var(--accent); color:var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 0 16px rgba(127,255,160,0.3);
+  }
+
+  footer{
+    text-align:center; padding:30px; font-family:var(--font-mono);
+    color:var(--text-dim); font-size:12px; border-top:1px solid var(--line);
+  }
+
+  .fade-up{ opacity:0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .fade-up.visible{ opacity:1; transform:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    .fade-up{ opacity:1; transform:none; transition:none; }
+    .bar-fill{ transition:none; }
+    .btn:hover, .stat:hover, .skill-card:hover, .project-card:hover,
+    .cert-card:hover, .filter-btn:hover, .contact-links a:hover{
+      transform:none; box-shadow:none; transition:none;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="bg-fx">
+  <div class="bg-grid"></div>
+  <!-- Animated node/line network background, drawn + animated via JS at the bottom of the file -->
+  <canvas id="networkCanvas"></canvas>
+  <div class="bg-glow g1"></div>
+  <div class="bg-glow g2"></div>
+</div>
+<div class="cursor-ball" id="cursorBall"></div>
+
+<nav>
+  <!-- EDIT: your initials/logo mark -->
+  <div class="logo">HAMZA<span>.</span></div>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">☰</button>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#about">About</a></li>
+    <li><a href="#education">Education</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#certs">Certifications</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<section class="hero" id="top">
+  <div class="hero-grid">
+    <div class="hero-text">
+      <h1>Hamza Shafi</h1>
+      <!-- EDIT: your name above, and role/title + pitch below -->
+      <p class="role">CS undergraduate student · FAST-National University of Computer and Emerging Sciences· 2025–Present</p>
+      <p class="pitch">Computer Science student focused on learning, building, and improving every day. Interested in software development, problem-solving, and creating impactful digital solutions. — Focused on building technical skills while understanding how technology drives business growth.</p>
+
+      <div class="btn-row">
+        <a class="btn solid" href="#projects">View Projects</a>
+        <a class="btn" href="#contact">Contact Me</a>
+        <!-- EDIT: point this at your actual resume/CV file, e.g. href="resume.pdf" download -->
+        <a class="btn" href="CV.docx">Download CV ↓</a>
+      </div>
+
+      <!-- EDIT: your real stats -->
+      <div class="stat-row">
+        <div class="stat"><div class="num">3+</div><div class="label">Projects</div></div>
+        <div class="stat"><div class="num">5+</div><div class="label">Certificates</div></div>
+      </div>
+    </div>
+
+    <div class="hero-photo">
+      <div class="frame">
+        <!-- EDIT: replace src with your own photo. Recommended: square-ish or 4:5 portrait, at least 340px wide.
+             e.g. src="images/profile.jpg" (keep the image file next to this HTML file, or use a hosted URL) -->
+        <img src="hamza.port.jpeg" alt="Your Name">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="tag">◉ ONLINE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <h2>About Me</h2>
+  <div class="about-grid fade-up">
+    <div>
+      <!-- EDIT: your bio — 2-3 short paragraphs about who you are and what you do -->
+      <p>My name is <strong>Hamza Shafi</strong>.and I'm a BS Computer Science student passionate about software development and the business side of tech — who you are, what you study or do, and where.</p>
+      <p>I enjoy learning new technologies, building practical solutions, and continuously improving my technical skills..</p>
+      <p>Primarily working with C++, HTML, CSS, JavaScript, Git, and GitHub, and I'm currently expanding my expertise in modern web development. Some of my projects include a responsive restaurant website with an interactive digital menu and QR-based access— along with several C++ applications that strengthened my understanding of object-oriented programming and problem-solving.</p>
+    </div>
+    <!-- EDIT: your real contact/info details and links (href="#" placeholders below need real URLs) -->
+    <div class="info-card">
+      <div class="row"><span class="k">Location</span><span class="v">Lahore, Pakistan</span></div>
+      <div class="row"><span class="k">Institution</span><span class="v"><a href="#">National University of Computer and Emerging Sciences</a></span></div>
+      <div class="row"><span class="k">Email</span><span class="v"><a href="#">hmalik0278@gmail.com</a></span></div>
+      <div class="row"><span class="k">Phone</span><span class="v">+92 316 4800796</span></div>
+     
+    </div>
+  </div>
+
+  <!-- EDIT: education / activities timeline — add or remove .timeline-item blocks as needed, newest first -->
+  <div class="timeline fade-up">
+    <div class="timeline-item">
+      <div class="years">2025 — 2029</div>
+      <h4>National University of Computer and Emerging Sciences</h4>
+      <div class="org">Bachelors in Computer Science</div>
+    </div>
+    <div class="timeline-item">
+      <div class="years">2023 — 2025</div>
+      <h4>Chenab College Jhang</h4>
+      <div class="org">FSC-Pre.Engr</div>
+      <span class="note">🏆 High Achiever</span>
+    </div>
+    <div class="timeline-item">
+      <div class="years">2021 — 2023</div>
+      <h4>Sacred Heart High School Jhang</h4>
+      <div class="org">Matric</div>
+      <span class="note">🤖 Board of Honor</span>
+    </div>
+  </div>
+</section>
+
+<section id="skills">
+  
+
+  <!-- Decorative terminal — purely visual, edit the lines below if you want different mock output -->
+  <div class="terminal-window" style="max-width:560px; margin-bottom:32px;">
+    <div class="terminal-bar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    </div>
+    <div class="terminal-body">
+      <div><span class="prompt">Hamza Shafi</span><span class="out">:~$ </span><span class="out">portfolio.txt</span></div>
+      <div class="out">HTML, CSS, C++, → Email Marketing-Digital Marketing</div>
+      <div class="out">Still learning and growing</div>
+    </div>
+  </div>
+
+  <h2>Technical Arsenal</h2>
+  <!-- EDIT: rename each skill and set data-pct (and the visible "0%") to your real proficiency level.
+       Add/remove .skill-card blocks as needed. -->
+  <div class="skills-grid fade-up">
+    <div class="skill-card"><div class="head"><span>HTML</span><span class="pct">95%</span></div><div class="bar"><div class="bar-fill" data-pct="95"></div></div></div>
+    <div class="skill-card"><div class="head"><span>CSS</span><span class="pct">70%</span></div><div class="bar"><div class="bar-fill" data-pct="70"></div></div></div>
+    <div class="skill-card"><div class="head"><span>JS</span><span class="pct">60%</span></div><div class="bar"><div class="bar-fill" data-pct="60"></div></div></div>
+    <div class="skill-card"><div class="head"><span>C++</span><span class="pct">80%</span></div><div class="bar"><div class="bar-fill" data-pct="80"></div></div></div>
+    <div class="skill-card"><div class="head"><span>Digital Marketing</span><span class="pct">80%</span></div><div class="bar"><div class="bar-fill" data-pct="80"></div></div></div>
+    <div class="skill-card"><div class="head"><span>Email Marketing</span><span class="pct">70%</span></div><div class="bar"><div class="bar-fill" data-pct="70"></div></div></div>
+    <div class="skill-card"><div class="head"><span>Github</span><span class="pct">90%</span></div><div class="bar"><div class="bar-fill" data-pct="90"></div></div></div>
+  </div>
+</section>
+
+<section id="projects">
+  <h2>Things I've Built</h2>
+  <!-- EDIT: filter button labels/data-filter values must match the data-tags used on the cards below -->
+  <div class="filter-row">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="tag1">Tag One</button>
+    <button class="filter-btn" data-filter="tag2">Tag Two</button>
+    <button class="filter-btn" data-filter="tag3">Tag Three</button>
+    <button class="filter-btn" data-filter="tag4">Tag Four</button>
+  </div>
+  <!-- EDIT: one .project-card per project — set title, description, tech chips, data-tags (space-separated
+       if a project belongs to multiple filters), and the real link/repo URL -->
+  <div class="project-grid fade-up" id="projectGrid">
+    <div class="project-card" data-tags="tag1">
+      <div class="tag-line">PROJECT 01</div>
+      <h3>Student Performance Management System</h3>
+      <p>Developed a Student Performance Management System in C++ to manage student records, grades, and academic performance efficiently.</p>
+      <div class="chip-row"><span class="chip">C++</span><span class="chip">Console based</span></div>
+      <a class="link" href="https://github.com/Hamzaa-Shafi/SPMS" target="_blank">⭢ View Live / Repo</a>
+    </div>
+    <div class="project-card" data-tags="tag2">
+      <div class="tag-line">PROJECT 02</div>
+      <h3>Social Networking App simulation</h3>
+      <p>Developed a console-based Social Media Application in C++ using object-oriented programming, featuring user profiles, posts, friends, pages, and activity management.</p>
+      <div class="chip-row"><span class="chip">C++</span><span class="chip">OOP</span></div>
+      <a class="link" href="https://github.com/Hamzaa-Shafi/Social-Networking-App" target="_blank">⭢ View Live / Repo</a>
+    </div>
+    <div class="project-card" data-tags="tag3">
+      <div class="tag-line">PROJECT 03</div>
+      <h3>Library Management System</h3>
+      <p>Developed a Library Management System in C++ to efficiently manage books, member records, borrowing, and return transactions.</p>
+      <div class="chip-row"><span class="chip">C++</span><span class="chip">Console-Based</span></div>
+      <a class="link" href="https://github.com/Hamzaa-Shafi/Library-Management-System" target="_blank">⭢ View Live / Repo</a>
+    </div>
+    <div class="project-card" data-tags="tag4">
+      <div class="tag-line">PROJECT 04</div>
+      <h3>Expense Tracker</h3>
+      <p>A Python-Expense Tracker is a simple application that allows users to record, categorize, and manage their daily expenses while tracking total spending and maintaining a clear overview of their finances.</p>
+      <div class="chip-row"><span class="chip">Python</span><span class="chip">Console-Based</span></div>
+      <a class="link" href="#">⭢ View Live / Repo</a>
+    </div>
+  </div>
+</section>
+
+<section id="certs">
+  <h2>Badges Earned</h2>
+  <!-- EDIT: one .cert-card per certificate — name, issuing org, and date -->
+  <div class="cert-grid fade-up">
+    <div class="cert-card"><div class="name">Introduction to Cybersecurity Awareness</div><div class="issuer">HP Life</div><div class="date">Dec-2025</div></div>
+    <div class="cert-card"><div class="name">Professional Networking for Career Growth</div><div class="issuer">HP Life</div><div class="date">Feb-2026</div></div>
+    <div class="cert-card"><div class="name">Digital Marketing Certified</div><div class="issuer">HubSpot Academy</div><div class="date">June-2026</div></div>
+    <div class="cert-card"><div class="name">Getting Started with Data</div><div class="issuer">IBM</div><div class="date">Jul-2026</div></div>
+    <div class="cert-card"><div class="name">CSS</div><div class="issuer">HackerRank</div><div class="date">Jul-2026</div></div>
+     <div class="cert-card"><div class="name">Leads Generation</div><div class="issuer">Simplilearn</div><div class="date">Jul-2026</div></div>
+ <div class="cert-card"><div class="name">Email Marketing</div><div class="issuer">Simplilearn</div><div class="date">Jul-2026</div></div>
+  <div class="cert-card"><div class="name">AI Search Operating System</div><div class="issuer">Semrush</div><div class="date">Jul-2026</div></div>
+      <div class="cert-card"><div class="name">Python</div><div class="issuer">Kaggle</div><div class="date">Jul-2026</div></div>
+
+  </div>
+</section>
+
+<section id="contact">
+  <div class="contact-wrap fade-up">
+    <h2>Let's Build Something Together.</h2>
+    <p>Open to internships, collaborations, freelance work, and research. Reach out any time.</p>
+    <!-- EDIT: replace all four links with your real email, GitHub, LinkedIn, and phone number -->
+    <div class="contact-links">
+      <a href="mailto:you@email.com">✉️ hmalik0278@gmail.com</a>
+      <a href="https://github.com/Hamzaa-Shafi" target="_blank"> Github</a>
+      
+      <a href="https://www.linkedin.com/in/hamza-shafi-306355319/" target="_blank">LinkedIn Profile</a>
+      <a href="tel:+92 316 4800796">📞 +92 316 4800796</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © <span id="year"></span> Hamza Shafi — All Rights Reserved
+</footer>
+
+<script>
+  // Mobile nav
+  const navToggle = document.getElementById('navToggle');
+  const navLinks = document.getElementById('navLinks');
+  navToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+  // Year
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // ===== Custom "butter smooth" ball cursor =====
+  // Uses time-based (not frame-based) exponential easing so the motion looks
+  // identical on 60Hz, 120Hz, 144Hz etc. — this is what removes the jitter/snap.
+  const cursorBall = document.getElementById('cursorBall');
+  const supportsHover = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  const wantsMotion = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (supportsHover && cursorBall) {
+    document.body.classList.add('custom-cursor');
+
+    let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+    let ballX = mouseX, ballY = mouseY;
+    let lastTime = null;
+
+    // tau = "response time" in ms. Smaller = snappier/tighter follow.
+    // Larger = silkier/floatier trail. 80-120 feels like butter without lagging noticeably.
+    const tau = wantsMotion ? 65 : 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorBall.classList.add('active');
+    }, { passive: true });
+    window.addEventListener('mouseleave', () => cursorBall.classList.remove('active'));
+
+    function animateCursor(time){
+      if (lastTime === null) lastTime = time;
+      const dt = time - lastTime;
+      lastTime = time;
+
+      // Exponential decay factor — frame-rate independent smoothing.
+      const factor = tau > 0 ? (1 - Math.exp(-dt / tau)) : 1;
+
+      ballX += (mouseX - ballX) * factor;
+      ballY += (mouseY - ballY) * factor;
+
+      cursorBall.style.transform = `translate3d(${ballX.toFixed(2)}px, ${ballY.toFixed(2)}px, 0)`;
+      requestAnimationFrame(animateCursor);
+    }
+    requestAnimationFrame(animateCursor);
+
+    const hoverTargets = 'a, button, .project-card, .skill-card, .cert-card, .filter-btn';
+    document.addEventListener('mouseover', (e) => {
+      if (e.target.closest(hoverTargets)) cursorBall.classList.add('hovering');
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (e.target.closest(hoverTargets)) cursorBall.classList.remove('hovering');
+    });
+  }
+
+  // ===== Animated network background (nodes + connecting lines) =====
+  (function networkBackground(){
+    const canvas = document.getElementById('networkCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width, height, dpr;
+    let nodes = [];
+
+    // Fewer nodes on small screens for perf; density scales with area otherwise.
+    // Lowered the cap/density vs. before — too many nodes was adding to the main-thread
+    // work each frame and contributing to the overall page feeling laggy.
+    function nodeCount(){
+      const area = window.innerWidth * window.innerHeight;
+      return Math.min(55, Math.max(20, Math.round(area / 32000)));
+    }
+
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = canvas.clientWidth = window.innerWidth;
+      height = canvas.clientHeight = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function makeNodes(){
+      const count = nodeCount();
+      nodes = Array.from({ length: count }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+      }));
+    }
+
+    const LINK_DIST = 140; // px — nodes closer than this get a connecting line
+    const LINK_DIST_SQ = LINK_DIST * LINK_DIST; // compare squared distances, skip sqrt() until needed
+
+    function draw(){
+      ctx.clearRect(0, 0, width, height);
+
+      // update + draw nodes
+      for (const n of nodes){
+        if (!reduce){
+          n.x += n.vx;
+          n.y += n.vy;
+          if (n.x < 0 || n.x > width) n.vx *= -1;
+          if (n.y < 0 || n.y > height) n.vy *= -1;
+        }
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(127,255,160,0.55)';
+        ctx.fill();
+      }
+
+      // draw connecting lines between near nodes (squared-distance check avoids
+      // an expensive Math.sqrt() call for every single pair, only for pairs that pass)
+      for (let i = 0; i < nodes.length; i++){
+        for (let j = i + 1; j < nodes.length; j++){
+          const a = nodes[i], b = nodes[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < LINK_DIST_SQ){
+            const dist = Math.sqrt(distSq);
+            const opacity = (1 - dist / LINK_DIST) * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(127,255,160,${opacity})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+
+      if (!reduce) requestAnimationFrame(draw);
+    }
+
+    resize();
+    makeNodes();
+    draw(); // draws once if reduced motion, loops otherwise
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => { resize(); makeNodes(); if (reduce) draw(); }, 200);
+    });
+
+    // Pause the animation loop when the tab isn't visible to save battery/CPU.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !reduce) requestAnimationFrame(draw);
+    });
+  })();
+
+  // Fade-up on scroll
+  const faders = document.querySelectorAll('.fade-up');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        e.target.classList.add('visible');
+        if (e.target.id === 'projectGrid' || e.target.querySelector('.bar-fill')) {
+          e.target.querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.pct + '%');
+        }
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  faders.forEach(f => io.observe(f));
+
+  // Project filter
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+      document.querySelectorAll('.project-card').forEach(card => {
+        const tags = card.dataset.tags || '';
+        card.style.display = (filter === 'all' || tags.includes(filter)) ? 'flex' : 'none';
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
